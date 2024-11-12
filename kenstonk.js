@@ -16,12 +16,12 @@ function round(num) {
   return +num.toFixed(2);
 }
 
-var price = 75;
-var interest = 0.05;
-var volatility = 0.40;
+var price = 52;
+var interest = 0.005;
+var volatility = 0.60;
 var timeStep = 1 / (253 * 6.5 * 60 * 60);
 var spread = 0.02;
-var timeToExpiry = 28/365;
+var timeToExpiry = 1 / 12;
 var rc = 0.02;
 
 var sizes = [25, 50, 100, 150, 200, 250, 300, 400, 500, 750, 1000];
