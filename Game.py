@@ -14,7 +14,7 @@ class Game():
         # self.intRate = 0.05
         self.startS = 52
         self.vol = .6
-        self.dte = 1/12
+        self.dte = round(1/12, 2)
         self.intRate = .005
         self.centerK = 5*round(self.startS/5)
         self.Ks = [self.centerK + 5*i for i in range(-numKs//2+1, numKs//2+1)]
@@ -26,6 +26,11 @@ class Game():
         self.puts = [blackScholes("p", self.startS, strike, self.intRate, self.dte, self.vol) for strike in self.Ks]
         self.callDelts = [round(100*blackScholes("d", self.startS, strike, self.intRate, self.dte, self.vol)) for strike in self.Ks]
         self.curS = self.startS
+        self.PNL = 0
+        self.delta = 0
+        self.optionTypes = {"c":"call", "p":"put"}
+
+
 
     def __repr__(self):
         return str(self.startS)+", "+str(self.Ks)+"\n"+str(self.calls)+"\n"+str(self.puts)+"\n"+str(self.callDelts)
@@ -35,7 +40,45 @@ class Game():
 
     def randomMove(self):
         self.curS*=(1+gauss(0, 1)*self.vol*(1 / (253 * 6.5 * 60 * 60))**0.5+self.intRate*(1 / (253 * 6.5 * 60 * 60)))
-        return round(self.curS, 2)
+        self.curS = round(self.curS, 2)
+        return self.curS
+
+    def printBoard(self):
+        board = f"Starting Price: {self.startS} Vol: {self.vol}\n"
+        board += f"Current Price: {self.curS} PNL: {self.PNL} Delta: {self.delta}\n\n"
+        board += "___________________________________________________________\n"
+        board += "| Delta | Bid | Call | Offer | Strike | Bid | Put | Offer |\n"
+        board += "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――\n"
+        opts = []
+        for strike in self.Ks:
+            opts = [round(blackScholes("d", self.startS, strike, self.intRate, self.dte, self.vol),2), 0, round(blackScholes("c", self.startS, strike, self.intRate, self.dte, self.vol), 2),0, strike, 0, round(blackScholes("p", self.startS, strike, self.intRate, self.dte, self.vol),2), 0]
+            board += "| "+" | ".join([str(x)+"0" if (x == round(x,1) and x != round(x, 0)) else str(x) for x in opts])+" |\n"
+        board += "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――\n"
+        print(board)
+        return
+        
+    def generateOrder(self, optType, orderType, strike):
+        theo = round(blackScholes(optType, self.curS, strike, self.intRate, self.dte, self.vol),2)
+        alpha = gauss(0,0.1)
+        price = round(theo + alpha, 2)
+        q = round(random(), 2)*1000
+        if orderType == "b":
+            return f"{price} bid for {q} {strike} {self.optionTypes[optType]}s"
+        if orderType == "o":
+            return f"offer {q} {strike} {self.optionTypes[optType]}s for {price}"
+
+
+    def tick(self):
+        temp = self.randomMove()
+        self.printBoard()
+        if random() < 0.25:
+            opTp = "c"
+            orTp = "b"
+            if random()<0.5:
+                opTp = "p"
+            if random()<0.5:
+                orTp = "o"
+            print(self.generateOrder(opTp, orTp, choice(self.Ks)))
 
 
 
@@ -63,5 +106,7 @@ def play(numKs, width):
 
 
 g1 = Game()
-for i in range(100):
-    print(g1.randomMove())
+for i in range(10):
+    g1.tick()
+
+
