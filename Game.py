@@ -25,15 +25,18 @@ class Game():
         self.calls = [blackScholes("c", self.startS, strike, self.intRate, self.dte, self.vol) for strike in self.Ks]
         self.puts = [blackScholes("p", self.startS, strike, self.intRate, self.dte, self.vol) for strike in self.Ks]
         self.callDelts = [round(100*blackScholes("d", self.startS, strike, self.intRate, self.dte, self.vol)) for strike in self.Ks]
-            
-            
-
+        self.curS = self.startS
 
     def __repr__(self):
         return str(self.startS)+", "+str(self.Ks)+"\n"+str(self.calls)+"\n"+str(self.puts)+"\n"+str(self.callDelts)
 
     def movement(self):
         return choice(self.moves)
+
+    def randomMove(self):
+        self.curS*=(1+gauss(0, 1)*self.vol*(1 / (253 * 6.5 * 60 * 60))**0.5+self.intRate*(1 / (253 * 6.5 * 60 * 60)))
+        return round(self.curS, 2)
+
 
 
 def blackScholes(optType, s, k, r, t, v):
@@ -60,4 +63,5 @@ def play(numKs, width):
 
 
 g1 = Game()
-print(g1)
+for i in range(100):
+    print(g1.randomMove())
