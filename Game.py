@@ -46,14 +46,16 @@ class Game():
     def printBoard(self):
         board = f"Starting Price: {self.startS} Vol: {self.vol}\n"
         board += f"Current Price: {self.curS} PNL: {self.PNL} Delta: {self.delta}\n\n"
-        board += "___________________________________________________________\n"
-        board += "| Delta | Bid | Call | Offer | Strike | Bid | Put | Offer |\n"
-        board += "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――\n"
+        board += "_________________________________________________________________________\n"
+        board += "|  Delta |   Bid  |  Call  |  Offer | Strike |   Bid  |   Put |   Offer |\n"
+        board += "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――\n"
         opts = []
         for strike in self.Ks:
             opts = [round(blackScholes("d", self.startS, strike, self.intRate, self.dte, self.vol),2), 0, round(blackScholes("c", self.startS, strike, self.intRate, self.dte, self.vol), 2),0, strike, 0, round(blackScholes("p", self.startS, strike, self.intRate, self.dte, self.vol),2), 0]
-            board += "| "+" | ".join([str(x)+"0" if (x == round(x,1) and x != round(x, 0)) else str(x) for x in opts])+" |\n"
-        board += "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――\n"
+            rowVals = [str(x)+"0" if (x == round(x,1) and x != round(x, 0)) else str(x) for x in opts]
+            boxes = ("|" + ("{: ^8}|")*len(rowVals)).format(*rowVals)
+            board += boxes+"\n"
+        board += "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――\n"
         print(board)
         return
         
