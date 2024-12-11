@@ -6,7 +6,8 @@ import tkinter as tk
 from colored import Style
 # Black-Scholes:
 
-
+#TODO: implement queue to delete orders after time
+#TODO: make clicking orders do something
 
 class Game():
     def __init__(self, numKs = 5, width = [50, 100], moveType = "uniform"):
@@ -32,6 +33,7 @@ class Game():
         self.delta = 0
         self.optionTypes = {"c":"call", "p":"put"}
         self.underline = Style.underline_color('Black')
+        self.orderColumns = {"cb":2, "co":4, "pb":6, 'po':8}
 
 
 
@@ -85,7 +87,25 @@ class Game():
                 frame.grid(row=r, column=i+1, padx=5, pady=5)
                 label = tk.Label(master=frame, text=rowVals[i])
                 label.pack(padx=5, pady=5)
+        
+    def startTick(self):
+        frame = tk.Frame(master=window, relief=tk.SUNKEN, borderwidth=1)
+        frame.grid(row = 3, column = 0)
+        self.ticker = tk.Label(master=frame, text = "0")
+        self.ticker.pack()
+        self.updateTick()
 
+    def updateTick(self):
+        self.ticker.config(text=f"{self.randomMove()}")
+        if random() < 0.25:
+            opTp = "c"
+            orTp = "b"
+            if random()<0.5:
+                opTp = "p"
+            if random()<0.5:
+                orTp = "o"
+            self.generateOrderButton(opTp, orTp, choice(self.Ks))
+        self.ticker.after(500, self.updateTick)
 
     def generateOrder(self, optType, orderType, strike):
         theo = round(blackScholes(optType, self.curS, strike, self.intRate, self.dte, self.vol),2)
@@ -97,6 +117,21 @@ class Game():
         if orderType == "o":
             return f"offer {q} {strike} {self.optionTypes[optType]}s for {price}"
         
+    def generateOrderButton(self, optType, orderType, strike):
+        theo = round(blackScholes(optType, self.curS, strike, self.intRate, self.dte, self.vol),2)
+        alpha = gauss(0,0.1)
+        price = round(theo + alpha, 2)
+        orderRow = self.Ks.index(strike) + 1
+        frame = tk.Frame(master=window, borderwidth=1)
+        frame.grid(row = orderRow, column = self.orderColumns[optType+orderType])
+        
+        q = round(random(), 2)*1000
+        orderButton = tk.Button(master=frame, text=f"{price} / {q}x", command=lambda: self.placeOrder(optType, orderType, strike, price, q))
+        orderButton.pack()
+        window.update()
+
+    def placeOrder(self, optType, orderType, strike, price, quantity):
+        pass
 
     def tick(self):
         temp = self.randomMove()
@@ -112,6 +147,7 @@ class Game():
 
 
 
+
 def blackScholes(optType, s, k, r, t, v):
     d1 = (math.log(s/k) + (r+(v**2)/2)*t)/(v*(t**0.5))
     d2 = d1 - v*(t**0.5)
@@ -121,6 +157,7 @@ def blackScholes(optType, s, k, r, t, v):
         return norm.cdf(d1)
     else:
         return -s*norm.cdf(-d1)+k*math.exp(-r*t)*norm.cdf(-d2)
+
 
 
 # def CND(x):
@@ -140,4 +177,10 @@ g1 = Game()
 #     g1.tick()
 window = tk.Tk()
 g1.tkBoard(window)
+
+frame = tk.Frame(master=window, relief=tk.SUNKEN, borderwidth=1)
+frame.grid(row = 2, column = 0)
+startTicker = tk.Button(master=frame, text="start", command=g1.startTick)
+startTicker.pack()
+
 window.mainloop()
