@@ -7,7 +7,9 @@ from colored import Style
 # Black-Scholes:
 
 #TODO: implement queue to delete orders after time
+#TODO: make orders only show for empty spaces
 #TODO: make clicking orders do something
+
 
 class Game():
     def __init__(self, numKs = 5, width = [50, 100], moveType = "uniform"):
@@ -15,6 +17,10 @@ class Game():
         # self.vol = .40
         # self.dte = 28/365
         # self.intRate = 0.05
+                
+        #params
+        self.orderTime = 5
+        self.orderChance = 0.8
         self.startS = 52
         self.vol = .6
         self.dte = round(1/12, 2)
@@ -25,6 +31,8 @@ class Game():
             self.moves =  [0.01*x if x <6 else -0.01*(x-5) for x in range(1, 11)]
         else:
             self.moves = [0.01, -0.01]
+
+        #helperVariables
         self.calls = [blackScholes("c", self.startS, strike, self.intRate, self.dte, self.vol) for strike in self.Ks]
         self.puts = [blackScholes("p", self.startS, strike, self.intRate, self.dte, self.vol) for strike in self.Ks]
         self.callDelts = [round(100*blackScholes("d", self.startS, strike, self.intRate, self.dte, self.vol)) for strike in self.Ks]
@@ -34,7 +42,39 @@ class Game():
         self.optionTypes = {"c":"call", "p":"put"}
         self.underline = Style.underline_color('Black')
         self.orderColumns = {"cb":2, "co":4, "pb":6, 'po':8}
+        self.openOrders = [False]*20
+        self.tick = 0
 
+        #gameWindow
+        self.wind = tk.Tk()
+        self.frame = tk.Frame(master=self.wind, relief=tk.SUNKEN, borderwidth=1)
+        self.frame.grid(row = 2, column = 0)
+        self.startTicker = tk.Button(master=self.frame, text="start", command=self.startTick)
+        self.startTicker.pack()
+        self.wind.rowconfigure([0, 1, 2, 3, 4, 5, 6, 7, 8], minsize = 50, weight=1)
+        self.wind.columnconfigure([0,1,2,3,4,5,6,7,8], minsize = 50, weight=1)
+        self.lbl_value = tk.Label(master=self.wind, text=f"""Starting Price: {self.startS}     Vol: {self.vol*100}
+        Current Price: {self.curS}     PNL: {self.PNL}
+        Delta: {self.delta}""")
+        self.lbl_value.grid(row=0, column = 0)
+        self.cols = ["Delta", 'Bid', 'Call', 'Offer', 'Strike', 'Bid', 'Put', 'Offer']
+        for i in range(8):
+            frame = tk.Frame(master=self.wind, relief=tk.SUNKEN, borderwidth=1)
+            frame.grid(row=0, column=i+1, padx=5, pady=5)
+            label = tk.Label(master=frame, text=self.cols[i])
+            label.pack(padx=5, pady=5)
+        opts = []
+        r = 0
+        for strike in self.Ks:
+            r += 1
+            opts = [round(blackScholes("d", self.startS, strike, self.intRate, self.dte, self.vol),2), 0, round(blackScholes("c", self.startS, strike, self.intRate, self.dte, self.vol), 2),0, strike, 0, round(blackScholes("p", self.startS, strike, self.intRate, self.dte, self.vol),2), 0]
+            rowVals = [str(x)+"0" if (x == round(x,1) and x != round(x, 0)) else str(x) for x in opts]
+            for i in range(8):
+                frame = tk.Frame(master=self.wind, borderwidth=1)
+                frame.grid(row=r, column=i+1, padx=5, pady=5)
+                label = tk.Label(master=frame, text=rowVals[i])
+                label.pack(padx=5, pady=5)
+        self.wind.mainloop()
 
 
     def __repr__(self):
@@ -47,49 +87,9 @@ class Game():
         self.curS*=(1+gauss(0, 1)*self.vol*(1 / (253 * 6.5 * 60 * 60))**0.5+self.intRate*(1 / (253 * 6.5 * 60 * 60)))
         self.curS = round(self.curS, 2)
         return self.curS
-
-    def printBoard(self):
-        board = f"Starting Price: {self.startS} Vol: {self.vol}\n"
-        board += f"Current Price: {self.curS} PNL: {self.PNL} Delta: {self.delta}\n\n"
-        board += "_________________________________________________________________________\n"
-        board += "|  Delta |   Bid  |  Call  |  Offer | Strike |   Bid  |   Put |   Offer |\n"
-        board += "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――\n"
-        opts = []
-        for strike in self.Ks:
-            opts = [round(blackScholes("d", self.startS, strike, self.intRate, self.dte, self.vol),2), 0, round(blackScholes("c", self.startS, strike, self.intRate, self.dte, self.vol), 2),0, strike, 0, round(blackScholes("p", self.startS, strike, self.intRate, self.dte, self.vol),2), 0]
-            rowVals = [str(x)+"0" if (x == round(x,1) and x != round(x, 0)) else str(x) for x in opts]
-            boxes = ("|" + ("{: ^8}|")*len(rowVals)).format(*rowVals)
-            board += boxes+"\n"
-        board += "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――\n"
-        print(board)
-        return
-    
-    def tkBoard(self, wind):
-        wind.rowconfigure([0, 1, 2, 3, 4, 5, 6, 7, 8], minsize = 50, weight=1)
-        wind.columnconfigure([0,1,2,3,4,5,6,7,8], minsize = 50, weight=1)
-        lbl_value = tk.Label(master=wind, text=f"""Starting Price: {self.startS}     Vol: {self.vol*100}
-        Current Price: {self.curS}     PNL: {self.PNL}     Delta: {self.delta}""")
-        lbl_value.grid(row=0, column = 0)
-        cols = ["Delta", 'Bid', 'Call', 'Offer', 'Strike', 'Bid', 'Put', 'Offer']
-        for i in range(8):
-            frame = tk.Frame(master=wind, relief=tk.SUNKEN, borderwidth=1)
-            frame.grid(row=0, column=i+1, padx=5, pady=5)
-            label = tk.Label(master=frame, text=cols[i])
-            label.pack(padx=5, pady=5)
-        opts = []
-        r = 0
-        for strike in self.Ks:
-            r += 1
-            opts = [round(blackScholes("d", self.startS, strike, self.intRate, self.dte, self.vol),2), 0, round(blackScholes("c", self.startS, strike, self.intRate, self.dte, self.vol), 2),0, strike, 0, round(blackScholes("p", self.startS, strike, self.intRate, self.dte, self.vol),2), 0]
-            rowVals = [str(x)+"0" if (x == round(x,1) and x != round(x, 0)) else str(x) for x in opts]
-            for i in range(8):
-                frame = tk.Frame(master=wind, borderwidth=1)
-                frame.grid(row=r, column=i+1, padx=5, pady=5)
-                label = tk.Label(master=frame, text=rowVals[i])
-                label.pack(padx=5, pady=5)
         
     def startTick(self):
-        frame = tk.Frame(master=window, relief=tk.SUNKEN, borderwidth=1)
+        frame = tk.Frame(master=self.wind, relief=tk.SUNKEN, borderwidth=1)
         frame.grid(row = 3, column = 0)
         self.ticker = tk.Label(master=frame, text = "0")
         self.ticker.pack()
@@ -97,53 +97,72 @@ class Game():
 
     def updateTick(self):
         self.ticker.config(text=f"{self.randomMove()}")
-        if random() < 0.25:
+        self.tick = (self.tick + 1) % self.orderTime
+        if self.tick == 0:
+            self.dequeueOrder()
+        if random() < 0.8:
             opTp = "c"
             orTp = "b"
+            orderIndex = 0
             if random()<0.5:
                 opTp = "p"
+                orderIndex += 10
             if random()<0.5:
                 orTp = "o"
-            self.generateOrderButton(opTp, orTp, choice(self.Ks))
-        self.ticker.after(500, self.updateTick)
-
-    def generateOrder(self, optType, orderType, strike):
-        theo = round(blackScholes(optType, self.curS, strike, self.intRate, self.dte, self.vol),2)
-        alpha = gauss(0,0.1)
-        price = round(theo + alpha, 2)
-        q = round(random(), 2)*1000
-        if orderType == "b":
-            return f"{price} bid for {q} {strike} {self.optionTypes[optType]}s"
-        if orderType == "o":
-            return f"offer {q} {strike} {self.optionTypes[optType]}s for {price}"
+                orderIndex += 5
+            strike = choice(self.Ks)
+            orderIndex += self.Ks.index(strike)
+            if not self.openOrders[orderIndex]:
+                self.generateOrderButton(opTp, orTp, strike)
+                self.openOrders[orderIndex] = True
+        self.ticker.after(1000, self.updateTick)
         
     def generateOrderButton(self, optType, orderType, strike):
         theo = round(blackScholes(optType, self.curS, strike, self.intRate, self.dte, self.vol),2)
         alpha = gauss(0,0.1)
         price = round(theo + alpha, 2)
         orderRow = self.Ks.index(strike) + 1
-        frame = tk.Frame(master=window, borderwidth=1)
+        frame = tk.Frame(master=self.wind, borderwidth=1)
         frame.grid(row = orderRow, column = self.orderColumns[optType+orderType])
-        
-        q = round(random(), 2)*1000
-        orderButton = tk.Button(master=frame, text=f"{price} / {q}x", command=lambda: self.placeOrder(optType, orderType, strike, price, q))
+        q = int(round(random(), 2)*1000)
+        orderButton = tk.Button(master=frame, text=f"{price} / {q}x", command=lambda: self.placeOrder(optType, orderType, strike, price, q, theo))
         orderButton.pack()
-        window.update()
+        self.wind.update()
 
-    def placeOrder(self, optType, orderType, strike, price, quantity):
+    def placeOrder(self, optType, orderType, strike, price, quantity, theo):
         pass
+        #TODO
+            #delta
+            #position
+            #PnL
+            #order log
+        strikeInd = self.Ks.index(strike)
+        sDelt = self.callDelts[strikeInd]
+        if optType == "p":
+            sDelt = 1-sDelt
+            if orderType == "o":
+                sDelt *= -1
+        elif orderType == "b":
+            sDelt *= -1
+        self.delta += sDelt*quantity
+        alpha = price - theo
+        if orderType == "o":
+            alpha *= -1
+        self.PNL = round(self.PNL + alpha * quantity, 0)
 
-    def tick(self):
-        temp = self.randomMove()
-        self.printBoard()
-        if random() < 0.25:
-            opTp = "c"
-            orTp = "b"
-            if random()<0.5:
-                opTp = "p"
-            if random()<0.5:
-                orTp = "o"
-            print(self.generateOrder(opTp, orTp, choice(self.Ks)))
+
+        self.lbl_value = tk.Label(master=self.wind, text=f"""Starting Price: {self.startS}     Vol: {self.vol*100}
+        Current Price: {self.curS}     PNL: {self.PNL}
+        Delta: {self.delta}""")
+        self.lbl_value.grid(row=0, column = 0)
+        self.wind.update()
+
+
+    def dequeueOrder(self):
+        pass
+        #TODO   
+
+
 
 
 
@@ -160,12 +179,6 @@ def blackScholes(optType, s, k, r, t, v):
 
 
 
-# def CND(x):
-#   if (x < 0):
-#     return 1 - CND(-x);
-#   else:
-#     k = 1 / (1 + .2316419 * x);
-#     return 1 - math.exp(-x * x / 2) / math.sqrt(2 * math.pi) * k * (.31938153 + k * (-.356563782 + k * (1.781477937 + k * (-1.821255978 + k * 1.330274429))));
 
 def play(numKs, width):
     pass
@@ -175,12 +188,9 @@ def play(numKs, width):
 g1 = Game()
 # for i in range(10):
 #     g1.tick()
-window = tk.Tk()
-g1.tkBoard(window)
+# window = tk.Tk()
+# g1.tkBoard(window)
 
-frame = tk.Frame(master=window, relief=tk.SUNKEN, borderwidth=1)
-frame.grid(row = 2, column = 0)
-startTicker = tk.Button(master=frame, text="start", command=g1.startTick)
-startTicker.pack()
 
-window.mainloop()
+
+# window.mainloop()
